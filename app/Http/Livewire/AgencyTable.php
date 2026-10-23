@@ -4,7 +4,6 @@ namespace App\Http\Livewire;
 
 use App\Models\Agency;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Facades\Storage;
 use Rappasoft\LaravelLivewireTables\DataTableComponent;
 use Rappasoft\LaravelLivewireTables\Views\Column;
 
@@ -25,7 +24,7 @@ class AgencyTable extends DataTableComponent
             Column::make("Address", "address")
                 ->sortable(),
             Column::make("Logo path", "logo_path")
-                ->format(fn($value) => '<img src="'.Storage::url($value).'" class="img-fluid" style="width: 12%;">')
+                ->format(fn($value, $row) => '<img src="'.$row->logo_url.'" class="img-fluid" style="width: 12%;">')
                 ->asHtml()
                 ->sortable(),
             Column::make("Poea", "poea")

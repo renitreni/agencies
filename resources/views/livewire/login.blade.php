@@ -47,7 +47,7 @@
                             <div class="oblique position-absolute top-0 h-100 d-md-block d-none me-n8">
                                 @if($photo_link)
                                 <div class="oblique-image bg-cover position-absolute fixed-top ms-auto h-100 z-index-0 ms-n6"
-                                     style="background-image:url('{{ Storage::url($photo_link) }}')"></div>
+                                     style="background-image:url('{{ $photo_link }}')"></div>
                                 @else
                                     <div class="oblique-image bg-cover position-absolute fixed-top ms-auto h-100 z-index-0 ms-n6"
                                          style="background-image:url('https://drive.google.com/uc?export=view&id=142Hnc7wzQPrOHZdyg5yWNhKagutizTeK')"></div>

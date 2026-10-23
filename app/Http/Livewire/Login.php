@@ -21,7 +21,7 @@ class Login extends Component
 
     public function mount()
     {
-        $this->photo_link = Agency::find($this->agency)?->logo_path;
+        $this->photo_link = Agency::find($this->agency)?->logo_url;
 
         if (! Auth::guest()) {
             return redirect()->route('dashboard');

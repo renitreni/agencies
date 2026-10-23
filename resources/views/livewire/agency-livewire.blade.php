@@ -115,7 +115,7 @@
             </div>
             <div class="col-md-6 mb-2">
                 <label>Preview</label>
-                <img src="{{ isset($details['logo_path']) ? Storage::url($details['logo_path']) : '' }}"
+                <img src="{{ isset($details['logo_path']) ? \App\Models\Agency::make(['logo_path' => $details['logo_path']])->logo_url : '' }}"
                      class="img-fluid" style="width: 150px">
             </div>
             <div class="col-md-12 mb-2">
