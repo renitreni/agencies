@@ -125,7 +125,13 @@
             const fraFinancials = @json($fraFinancials);
             
             const ctxFra = document.getElementById('fraVoucherChart').getContext('2d');
-            const fraVoucherChart = new Chart(ctxFra, {
+            
+            // Destroy existing chart instance if it exists
+            if (window.fraVoucherChart instanceof Chart) {
+                window.fraVoucherChart.destroy();
+            }
+            
+            window.fraVoucherChart = new Chart(ctxFra, {
                 type: 'bar',
                 data: {
                     labels: fraLabels,
@@ -206,7 +212,13 @@
             const statusCounts = @json($statusCounts);
             
             const ctxStatus = document.getElementById('statusChart').getContext('2d');
-            const statusChart = new Chart(ctxStatus, {
+            
+            // Destroy existing chart instance if it exists
+            if (window.statusChart instanceof Chart) {
+                window.statusChart.destroy();
+            }
+            
+            window.statusChart = new Chart(ctxStatus, {
                 type: 'doughnut',
                 data: {
                     labels: statusLabels,
@@ -217,7 +229,7 @@
                             'rgba(40, 167, 69, 0.7)',   // Deployed - green
                             'rgba(255, 193, 7, 0.7)',   // In Process - yellow
                             'rgba(220, 53, 69, 0.7)',   // Back Out - red
-                            'rgba(108, 117, 125, 0.7)'  // Other - gray
+                            'rgba(108, 117, 125, 0.7)'  // No Status - gray
                         ],
                         borderColor: [
                             'rgba(40, 167, 69, 1)',
@@ -248,7 +260,13 @@
             const monthCounts = @json($monthCounts);
             
             const ctxMonth = document.getElementById('monthlyChart').getContext('2d');
-            const monthlyChart = new Chart(ctxMonth, {
+            
+            // Destroy existing chart instance if it exists
+            if (window.monthlyChart instanceof Chart) {
+                window.monthlyChart.destroy();
+            }
+            
+            window.monthlyChart = new Chart(ctxMonth, {
                 type: 'line',
                 data: {
                     labels: monthLabels,

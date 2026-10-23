@@ -63,12 +63,20 @@ class DashboardLivewire extends Component
         $this->loadMonthlyTrend();
     }
 
-    private function getDateFilterQuery($query, $table = 'vouchers')
+    private function getDateFilterWhere($query, $table = 'vouchers')
     {
         if ($this->dateFilter !== 'all') {
             $query->whereDate($table . '.created_at', '>=', now()->subDays((int)$this->dateFilter));
         }
         return $query;
+    }
+
+    private function getDateFilterJoin($join, $table = 'v')
+    {
+        if ($this->dateFilter !== 'all') {
+            $join->whereDate($table . '.created_at', '>=', now()->subDays((int)$this->dateFilter));
+        }
+        return $join;
     }
 
     private function loadFRAVoucherAnalytics()
@@ -84,16 +92,18 @@ class DashboardLivewire extends Component
         
         // Get voucher counts and financials per FRA via job_orders
         // Use LEFT JOIN to include FRAs even without vouchers
+        // Move date filter INTO the JOIN to preserve LEFT JOIN semantics
         $query = DB::table('foreign_agencies as fa')
             ->leftJoin('job_orders as jo', 'jo.foreign_agency_id', '=', 'fa.id')
             ->leftJoin('vouchers as v', function ($join) use ($agencyId) {
                 $join->on('v.id', '=', 'jo.voucher_id')
                      ->where('v.agency_id', '=', $agencyId);
+                // Apply date filter inside JOIN to preserve LEFT JOIN
+                $this->getDateFilterJoin($join, 'v');
             })
             ->where('fa.agency_id', $agencyId);
         
-        // Apply date filter on vouchers table (v)
-        $this->getDateFilterQuery($query, 'v');
+        // NO date filter on main query - it's in the JOIN
         
         $fraVoucherData = $query->selectRaw('
                 fa.id as fra_id,
@@ -170,9 +180,9 @@ class DashboardLivewire extends Component
         $agencyId = auth()->user()->agency_id;
         
         $query = Voucher::query()->where('agency_id', $agencyId);
-        $this->getDateFilterQuery($query);
+        $this->getDateFilterWhere($query);
         
-        $statusData = $query->selectRaw('status, COUNT(*) as count')
+        $statusData = $query->selectRaw('COALESCE(NULLIF(status, ""), "No Status") as status, COUNT(*) as count')
             ->groupBy('status')
             ->get();
         
@@ -180,7 +190,7 @@ class DashboardLivewire extends Component
         $this->statusCounts = [];
         
         foreach ($statusData as $item) {
-            $label = $item->status ? ucfirst(str_replace('-', ' ', $item->status)) : 'Unknown';
+            $label = ucfirst(str_replace('-', ' ', $item->status));
             $this->statusLabels[] = $label;
             $this->statusCounts[] = (int) $item->count;
         }
