@@ -63,10 +63,10 @@ class DashboardLivewire extends Component
         $this->loadMonthlyTrend();
     }
 
-    private function getDateFilterQuery($query)
+    private function getDateFilterQuery($query, $table = 'vouchers')
     {
         if ($this->dateFilter !== 'all') {
-            $query->whereDate('vouchers.created_at', '>=', now()->subDays((int)$this->dateFilter));
+            $query->whereDate($table . '.created_at', '>=', now()->subDays((int)$this->dateFilter));
         }
         return $query;
     }
@@ -92,7 +92,8 @@ class DashboardLivewire extends Component
             })
             ->where('fa.agency_id', $agencyId);
         
-        $this->getDateFilterQuery($query);
+        // Apply date filter on vouchers table (v)
+        $this->getDateFilterQuery($query, 'v');
         
         $fraVoucherData = $query->selectRaw('
                 fa.id as fra_id,
