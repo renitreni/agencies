@@ -75,38 +75,46 @@ class DashboardLivewire extends Component
     {
         $agencyId = auth()->user()->agency_id;
         
+        // Get FRAs for this agency
         $fras = ForeignAgency::query()
             ->select(['id', 'agency_name'])
             ->where('agency_id', $agencyId)
             ->get()
             ->keyBy('id');
         
-        $query = DB::table('vouchers')
-            ->join('job_orders', 'job_orders.voucher_id', '=', 'vouchers.id')
-            ->where('vouchers.agency_id', $agencyId);
+        // Get voucher counts and financials per FRA via job_orders
+        // Use LEFT JOIN to include FRAs even without vouchers
+        $query = DB::table('foreign_agencies as fa')
+            ->leftJoin('job_orders as jo', 'jo.foreign_agency_id', '=', 'fa.id')
+            ->leftJoin('vouchers as v', function ($join) use ($agencyId) {
+                $join->on('v.id', '=', 'jo.voucher_id')
+                     ->where('v.agency_id', '=', $agencyId);
+            })
+            ->where('fa.agency_id', $agencyId);
         
         $this->getDateFilterQuery($query);
         
         $fraVoucherData = $query->selectRaw('
-                job_orders.foreign_agency_id,
-                COUNT(DISTINCT vouchers.id) as total,
-                SUM(CASE WHEN vouchers.status = "deployed" THEN 1 ELSE 0 END) as deployed,
-                SUM(COALESCE(vouchers.passporting_allowance,0)) as passporting,
-                SUM(COALESCE(vouchers.ticket,0)) as tickets,
-                SUM(COALESCE(vouchers.ticket_to_kuwait,0) + COALESCE(vouchers.ticket_to_qatar,0)) as special_tickets,
-                SUM(COALESCE(vouchers.medical_allowance,0) + COALESCE(vouchers.travel_allowance,0) + 
-                    COALESCE(vouchers.office_allowance,0) + COALESCE(vouchers.owwa_allowance,0) + 
-                    COALESCE(vouchers.tesda_allowance,0) + COALESCE(vouchers.weekly_allowance,0)) as allowances,
-                SUM(COALESCE(vouchers.nbi_renewal,0) + COALESCE(vouchers.pdos,0) + 
-                    COALESCE(vouchers.info_sheet,0) + COALESCE(vouchers.medical_follow_up,0) + 
-                    COALESCE(vouchers.fit_to_work,0) + COALESCE(vouchers.stamping,0) + 
-                    COALESCE(vouchers.vaccine_fare,0)) as processing_fees,
-                SUM(COALESCE(vouchers.nbi_refund,0) + COALESCE(vouchers.psa_refund,0) + 
-                    COALESCE(vouchers.passport_refund,0) + COALESCE(vouchers.fare_refund,0) + 
-                    COALESCE(vouchers.red_rebon_nbi,0)) as refunds,
-                SUM(COALESCE(vouchers.repat,0) + COALESCE(vouchers.total,0)) as other_costs
+                fa.id as fra_id,
+                fa.agency_name,
+                COUNT(DISTINCT v.id) as total,
+                SUM(CASE WHEN v.status = "deployed" THEN 1 ELSE 0 END) as deployed,
+                SUM(COALESCE(v.passporting_allowance,0)) as passporting,
+                SUM(COALESCE(v.ticket,0)) as tickets,
+                SUM(COALESCE(v.ticket_to_kuwait,0) + COALESCE(v.ticket_to_qatar,0)) as special_tickets,
+                SUM(COALESCE(v.medical_allowance,0) + COALESCE(v.travel_allowance,0) + 
+                    COALESCE(v.office_allowance,0) + COALESCE(v.owwa_allowance,0) + 
+                    COALESCE(v.tesda_allowance,0) + COALESCE(v.weekly_allowance,0)) as allowances,
+                SUM(COALESCE(v.nbi_renewal,0) + COALESCE(v.pdos,0) + 
+                    COALESCE(v.info_sheet,0) + COALESCE(v.medical_follow_up,0) + 
+                    COALESCE(v.fit_to_work,0) + COALESCE(v.stamping,0) + 
+                    COALESCE(v.vaccine_fare,0)) as processing_fees,
+                SUM(COALESCE(v.nbi_refund,0) + COALESCE(v.psa_refund,0) + 
+                    COALESCE(v.passport_refund,0) + COALESCE(v.fare_refund,0) + 
+                    COALESCE(v.red_rebon_nbi,0)) as refunds,
+                SUM(COALESCE(v.repat,0) + COALESCE(v.total,0)) as other_costs
             ')
-            ->groupBy('job_orders.foreign_agency_id')
+            ->groupBy('fa.id', 'fa.agency_name')
             ->get();
         
         $this->fraLabels = [];
@@ -116,7 +124,7 @@ class DashboardLivewire extends Component
         $this->fraDetails = [];
         
         foreach ($fraVoucherData as $item) {
-            $fraName = $fras->get($item->foreign_agency_id)?->agency_name ?? 'Unknown FRA';
+            $fraName = $item->agency_name ?? 'Unknown FRA';
             $total = (int) $item->total;
             $deployed = (int) $item->deployed;
             
@@ -146,6 +154,7 @@ class DashboardLivewire extends Component
             ];
         }
         
+        // If no FRAs exist at all, provide empty state
         if (empty($this->fraLabels)) {
             $this->fraLabels = ['No Data'];
             $this->fraTotalCounts = [0];

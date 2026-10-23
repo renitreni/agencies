@@ -39,8 +39,10 @@
                                 @endforeach
                             </div>
                         </div>
-                        <div class="card-body">
-                            <canvas id="fraVoucherChart" width="600" height="250"></canvas>
+                        <div class="card-body" style="position: relative; height: 300px;">
+                            <div style="width: 100%; height: 100%; position: relative;">
+                                <canvas id="fraVoucherChart"></canvas>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -51,8 +53,10 @@
                         <div class="card-header pb-0">
                             <h6 class="mb-0">Voucher Status Distribution</h6>
                         </div>
-                        <div class="card-body">
-                            <canvas id="statusChart" width="300" height="200"></canvas>
+                        <div class="card-body" style="position: relative; height: 250px;">
+                            <div style="width: 100%; height: 100%; position: relative;">
+                                <canvas id="statusChart"></canvas>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -63,8 +67,10 @@
                         <div class="card-header pb-0">
                             <h6 class="mb-0">Monthly Voucher Trend ({{ now()->year }})</h6>
                         </div>
-                        <div class="card-body">
-                            <canvas id="monthlyChart" width="300" height="200"></canvas>
+                        <div class="card-body" style="position: relative; height: 250px;">
+                            <div style="width: 100%; height: 100%; position: relative;">
+                                <canvas id="monthlyChart"></canvas>
+                            </div>
                         </div>
                     </div>
                 </div>
