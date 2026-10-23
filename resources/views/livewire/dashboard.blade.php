@@ -25,49 +25,18 @@
                     </div>
                 </div>
                 
-                {{-- FRA Voucher Analytics Chart --}}
+                {{-- Monthly Voucher Trend --}}
                 <div class="col-md-12 mt-4">
                     <div class="card">
                         <div class="card-header pb-0 d-flex justify-content-between align-items-center">
-                            <h6 class="mb-0">Vouchers per Foreign Recruitment Agency (FRA)</h6>
-                            <div class="btn-group btn-group-sm" role="group">
-                                @foreach(['30'=>'30 Days','90'=>'90 Days','365'=>'365 Days','all'=>'All Time'] as $value => $label)
-                                    <button wire:click="setDateFilter('{{$value}}')" 
-                                            class="btn btn-{{$dateFilter===$value?'primary':'outline-secondary'}} btn-sm">
-                                        {{$label}}
-                                    </button>
+                            <h6 class="mb-0">Monthly Voucher Trend</h6>
+                            <select wire:model="selectedYear" class="form-select form-select-sm" style="width: auto;">
+                                @foreach($availableYears as $year)
+                                    <option value="{{ $year }}">{{ $year }}</option>
                                 @endforeach
-                            </div>
+                            </select>
                         </div>
                         <div class="card-body" style="position: relative; height: 300px;">
-                            <div style="width: 100%; height: 100%; position: relative;">
-                                <canvas id="fraVoucherChart"></canvas>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                {{-- Status Distribution Donut Chart --}}
-                <div class="col-md-6 mt-4">
-                    <div class="card">
-                        <div class="card-header pb-0">
-                            <h6 class="mb-0">Voucher Status Distribution</h6>
-                        </div>
-                        <div class="card-body" style="position: relative; height: 250px;">
-                            <div style="width: 100%; height: 100%; position: relative;">
-                                <canvas id="statusChart"></canvas>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                {{-- Monthly Trend Line Chart --}}
-                <div class="col-md-6 mt-4">
-                    <div class="card">
-                        <div class="card-header pb-0">
-                            <h6 class="mb-0">Monthly Voucher Trend ({{ now()->year }})</h6>
-                        </div>
-                        <div class="card-body" style="position: relative; height: 250px;">
                             <div style="width: 100%; height: 100%; position: relative;">
                                 <canvas id="monthlyChart"></canvas>
                             </div>
@@ -118,143 +87,6 @@
     
     @push('scripts')
         <script>
-            // ============ FRA Grouped Bar Chart ============
-            const fraLabels = @json($fraLabels);
-            const fraTotalCounts = @json($fraTotalCounts);
-            const fraDeployedCounts = @json($fraDeployedCounts);
-            const fraFinancials = @json($fraFinancials);
-            
-            const ctxFra = document.getElementById('fraVoucherChart').getContext('2d');
-            
-            // Destroy existing chart instance if it exists
-            if (window.fraVoucherChart instanceof Chart) {
-                window.fraVoucherChart.destroy();
-            }
-            
-            window.fraVoucherChart = new Chart(ctxFra, {
-                type: 'bar',
-                data: {
-                    labels: fraLabels,
-                    datasets: [
-                        { 
-                            label: 'Total Vouchers', 
-                            data: fraTotalCounts, 
-                            backgroundColor: 'rgba(54, 162, 235, 0.6)',
-                            borderColor: 'rgba(54, 162, 235, 1)',
-                            borderWidth: 1
-                        },
-                        { 
-                            label: 'Deployed', 
-                            data: fraDeployedCounts, 
-                            backgroundColor: 'rgba(40, 167, 69, 0.6)',
-                            borderColor: 'rgba(40, 167, 69, 1)',
-                            borderWidth: 1
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    interaction: {
-                        mode: 'index',
-                        intersect: false
-                    },
-                    plugins: {
-                        legend: {
-                            display: true,
-                            position: 'top'
-                        },
-                        title: {
-                            display: true,
-                            text: 'Vouchers by FRA ({{ $filterLabel }})'
-                        },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    const idx = context.dataIndex;
-                                    const fin = fraFinancials[idx] || {};
-                                    const total = fraTotalCounts[idx];
-                                    const deployed = fraDeployedCounts[idx];
-                                    const lines = [];
-                                    lines.push(`${context.dataset.label}: ${context.raw}`);
-                                    if (context.dataset.label === 'Total Vouchers') {
-                                        lines.push(`Deployed: ${deployed}`);
-                                        lines.push(`Deployment Rate: ${total > 0 ? ((deployed/total)*100).toFixed(1) : 0}%`);
-                                        lines.push('--- Financials ---');
-                                        lines.push(`Passporting: ₱${fin.passporting?.toLocaleString() || 0}`);
-                                        lines.push(`Tickets: ₱${fin.tickets?.toLocaleString() || 0}`);
-                                        lines.push(`Special Tickets (KWT/QAT): ₱${fin.special_tickets?.toLocaleString() || 0}`);
-                                        lines.push(`Allowances: ₱${fin.allowances?.toLocaleString() || 0}`);
-                                        lines.push(`Processing Fees: ₱${fin.processing_fees?.toLocaleString() || 0}`);
-                                        lines.push(`Refunds: ₱${fin.refunds?.toLocaleString() || 0}`);
-                                        lines.push(`Other Costs: ₱${fin.other_costs?.toLocaleString() || 0}`);
-                                        const totalCost = Object.values(fin).reduce((a,b)=>a+b,0);
-                                        lines.push(`Total Financial: ₱${totalCost.toLocaleString()}`);
-                                    }
-                                    return lines;
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                stepSize: 1
-                            }
-                        }
-                    }
-                }
-            });
-            
-            // ============ Status Distribution Donut Chart ============
-            const statusLabels = @json($statusLabels);
-            const statusCounts = @json($statusCounts);
-            
-            const ctxStatus = document.getElementById('statusChart').getContext('2d');
-            
-            // Destroy existing chart instance if it exists
-            if (window.statusChart instanceof Chart) {
-                window.statusChart.destroy();
-            }
-            
-            window.statusChart = new Chart(ctxStatus, {
-                type: 'doughnut',
-                data: {
-                    labels: statusLabels,
-                    datasets: [{
-                        label: 'Vouchers',
-                        data: statusCounts,
-                        backgroundColor: [
-                            'rgba(40, 167, 69, 0.7)',   // Deployed - green
-                            'rgba(255, 193, 7, 0.7)',   // In Process - yellow
-                            'rgba(220, 53, 69, 0.7)',   // Back Out - red
-                            'rgba(108, 117, 125, 0.7)'  // No Status - gray
-                        ],
-                        borderColor: [
-                            'rgba(40, 167, 69, 1)',
-                            'rgba(255, 193, 7, 1)',
-                            'rgba(220, 53, 69, 1)',
-                            'rgba(108, 117, 125, 1)'
-                        ],
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'right'
-                        },
-                        title: {
-                            display: true,
-                            text: 'Voucher Status ({{ $filterLabel }})'
-                        }
-                    }
-                }
-            });
-            
             // ============ Monthly Trend Line Chart ============
             const monthLabels = @json($monthLabels);
             const monthCounts = @json($monthCounts);
@@ -292,7 +124,7 @@
                         },
                         title: {
                             display: true,
-                            text: 'Monthly Vouchers ({{ now()->year }})'
+                            text: 'Monthly Vouchers ({{ $selectedYear }})'
                         }
                     },
                     scales: {

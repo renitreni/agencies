@@ -25,17 +25,9 @@ class DashboardLivewire extends Component
     public array $fraFinancials = [];
     public array $fraDetails = [];
     
-    // Date Filter
-    public string $dateFilter = '90';
-    public string $filterLabel = 'Last 90 Days';
-    
-    // Status Distribution
-    public array $statusLabels = [];
-    public array $statusCounts = [];
-    
-    // Monthly Trend
-    public array $monthLabels = [];
-    public array $monthCounts = [];
+    // Monthly Trend Year Filter
+    public string $selectedYear = '';
+    public array $availableYears = [];
 
     public function mount()
     {
@@ -48,35 +40,32 @@ class DashboardLivewire extends Component
                                        ->count();
         $this->totalCandidate = Candidate::query()->where('agency_id', $agencyId)->count();
         
+        $this->loadAvailableYears();
+        $this->selectedYear = $this->availableYears[0] ?? (string)now()->year;
         $this->loadFRAVoucherAnalytics();
-        $this->loadStatusDistribution();
         $this->loadMonthlyTrend();
     }
 
-    public function setDateFilter($days)
+    public function setYear($year)
     {
-        $this->dateFilter = $days;
-        $labels = ['30' => 'Last 30 Days', '90' => 'Last 90 Days', '365' => 'Last 365 Days', 'all' => 'All Time'];
-        $this->filterLabel = $labels[$days] ?? 'Last 90 Days';
-        $this->loadFRAVoucherAnalytics();
-        $this->loadStatusDistribution();
+        $this->selectedYear = $year;
         $this->loadMonthlyTrend();
     }
 
-    private function getDateFilterWhere($query, $table = 'vouchers')
+    private function loadAvailableYears()
     {
-        if ($this->dateFilter !== 'all') {
-            $query->whereDate($table . '.created_at', '>=', now()->subDays((int)$this->dateFilter));
-        }
-        return $query;
-    }
-
-    private function getDateFilterJoin($join, $table = 'v')
-    {
-        if ($this->dateFilter !== 'all') {
-            $join->whereDate($table . '.created_at', '>=', now()->subDays((int)$this->dateFilter));
-        }
-        return $join;
+        $agencyId = auth()->user()->agency_id;
+        
+        $years = Voucher::query()
+            ->where('agency_id', $agencyId)
+            ->selectRaw('YEAR(created_at) as year')
+            ->groupBy('year')
+            ->orderByDesc('year')
+            ->pluck('year')
+            ->map(fn($y) => (string)$y)
+            ->toArray();
+        
+        $this->availableYears = $years ?: [(string)now()->year];
     }
 
     private function loadFRAVoucherAnalytics()
@@ -92,18 +81,13 @@ class DashboardLivewire extends Component
         
         // Get voucher counts and financials per FRA via job_orders
         // Use LEFT JOIN to include FRAs even without vouchers
-        // Move date filter INTO the JOIN to preserve LEFT JOIN semantics
         $query = DB::table('foreign_agencies as fa')
             ->leftJoin('job_orders as jo', 'jo.foreign_agency_id', '=', 'fa.id')
             ->leftJoin('vouchers as v', function ($join) use ($agencyId) {
                 $join->on('v.id', '=', 'jo.voucher_id')
                      ->where('v.agency_id', '=', $agencyId);
-                // Apply date filter inside JOIN to preserve LEFT JOIN
-                $this->getDateFilterJoin($join, 'v');
             })
             ->where('fa.agency_id', $agencyId);
-        
-        // NO date filter on main query - it's in the JOIN
         
         $fraVoucherData = $query->selectRaw('
                 fa.id as fra_id,
@@ -175,38 +159,12 @@ class DashboardLivewire extends Component
         }
     }
 
-    private function loadStatusDistribution()
-    {
-        $agencyId = auth()->user()->agency_id;
-        
-        $query = Voucher::query()->where('agency_id', $agencyId);
-        $this->getDateFilterWhere($query);
-        
-        $statusData = $query->selectRaw('COALESCE(NULLIF(status, ""), "No Status") as status, COUNT(*) as count')
-            ->groupBy('status')
-            ->get();
-        
-        $this->statusLabels = [];
-        $this->statusCounts = [];
-        
-        foreach ($statusData as $item) {
-            $label = ucfirst(str_replace('-', ' ', $item->status));
-            $this->statusLabels[] = $label;
-            $this->statusCounts[] = (int) $item->count;
-        }
-        
-        if (empty($this->statusLabels)) {
-            $this->statusLabels = ['No Data'];
-            $this->statusCounts = [0];
-        }
-    }
-
     private function loadMonthlyTrend()
     {
         $agencyId = auth()->user()->agency_id;
         
         $query = Voucher::query()->where('agency_id', $agencyId);
-        $query->whereYear('created_at', now()->year);
+        $query->whereYear('created_at', (int)$this->selectedYear);
         
         $monthData = $query->selectRaw('MONTH(created_at) as month, MONTHNAME(created_at) as month_name, COUNT(*) as total')
             ->groupBy('month', 'month_name')
