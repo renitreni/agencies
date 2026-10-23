@@ -36,9 +36,11 @@ class Agency extends Model
 
         // Replace the old simsoh.xyz URL with the new simsoh.site URL
         $oldUrl = 'https://simsoh.xyz/storage/agency/c0vnPUrmJ3LMV4CFUlrMxSBIGGWTsC3k4M44Q18W.png';
+        $oldPath = 'agency/c0vnPUrmJ3LMV4CFUlrMxSBIGGWTsC3k4M44Q18W.png';
         $newUrl = 'https://simsoh.site/assets/images/logosim.png';
 
-        if ($logoPath === $oldUrl) {
+        // Check both full URL and relative storage path
+        if ($logoPath === $oldUrl || $logoPath === $oldPath) {
             return $newUrl;
         }
 
