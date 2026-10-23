@@ -42,13 +42,13 @@ class DashboardLivewire extends Component
         
         $this->loadAvailableYears();
         $this->selectedYear = $this->availableYears[0] ?? (string)now()->year;
-        $this->loadFRAVoucherAnalytics();
+        $this->loadFRAVoucherAnalytics($this->selectedYear);
         $this->loadMonthlyTrend();
     }
 
-    public function setYear($year)
+    public function updatedSelectedYear()
     {
-        $this->selectedYear = $year;
+        $this->loadFRAVoucherAnalytics($this->selectedYear);
         $this->loadMonthlyTrend();
     }
 
@@ -68,7 +68,7 @@ class DashboardLivewire extends Component
         $this->availableYears = $years ?: [(string)now()->year];
     }
 
-    private function loadFRAVoucherAnalytics()
+    private function loadFRAVoucherAnalytics(?string $year = null)
     {
         $agencyId = auth()->user()->agency_id;
         
@@ -83,9 +83,12 @@ class DashboardLivewire extends Component
         // Use LEFT JOIN to include FRAs even without vouchers
         $query = DB::table('foreign_agencies as fa')
             ->leftJoin('job_orders as jo', 'jo.foreign_agency_id', '=', 'fa.id')
-            ->leftJoin('vouchers as v', function ($join) use ($agencyId) {
+            ->leftJoin('vouchers as v', function ($join) use ($agencyId, $year) {
                 $join->on('v.id', '=', 'jo.voucher_id')
                      ->where('v.agency_id', '=', $agencyId);
+                if ($year) {
+                    $join->whereYear('v.created_at', '=', (int)$year);
+                }
             })
             ->where('fa.agency_id', $agencyId);
         
